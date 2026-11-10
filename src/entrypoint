@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# 使用指定的 PGID 修改 cms 用户组的 GID
+groupmod -o -g "${PGID}" cms
+# 使用指定的 PUID 修改 cms 用户的 UID
+usermod -o -u "${PUID}" cms
+
+mkdir -p /logs/nginx
+
+# 更改以下目录的拥有者为 cms 用户和 cms 用户组
+chown -R cms:cms \
+    "${HOME}" \
+    /config \
+    /logs
+
+# 设置默认的文件创建权限掩码 (umask)
+umask "${UMASK}"
+
+########
+# 处理 EMBY_HOST_PORT 末尾的斜杠
+if [[ "${EMBY_HOST_PORT}" == */ ]]; then
+    # 如果 EMBY_HOST_PORT 以斜杠结尾，则去除末尾的斜杠
+    export EMBY_HOST_PORT="${EMBY_HOST_PORT%/}"
+    echo "EMBY_HOST_PORT 末尾的斜杠已移除，环境变量已更新: ${EMBY_HOST_PORT}"
+fi
+
+
+# 删除旧配置
+rm -rf /etc/nginx/conf.d/constant.js
+# 增加新配置
+# 判断 /config/constant.js 是否存在
+if [ -f "/config/constant.js" ]; then
+    echo "文件 config/constant.js 存在，使用自定义高级配置"
+    cp -f "/config/constant.js" "/etc/nginx/conf.d/constant.js"
+else
+    cp -rf ${HOME}/embyExternalUrl/emby2Alist/nginx/conf.d/constant.js /etc/nginx/conf.d/constant.js
+    # 替换emby地址和api key
+    sed -i \
+      -e "s|http://172.17.0.1:8096|${EMBY_HOST_PORT}|g" \
+      -e "s/f839390f50a648fd92108bc11ca6730a/${EMBY_API_KEY}/g" \
+      -e 's/\["\/mnt"\]/\[""\]/g' \
+      -e "s/extConfig.imageCachePolicy/${IMAGE_CACHE_POLICY}/g" \
+      '/etc/nginx/conf.d/constant.js'
+fi
+
+# 将 EMBY_LOCAL_FILE_PATH 转换为 constant.js 中的路径列表。
+# 例如：/abc/a,/aaa -> /abc/a","/aaa
+if [ -n "${EMBY_LOCAL_FILE_PATH:-}" ]; then
+    # 保留 constant.js 中原有的首尾双引号，只替换路径间的逗号。
+    local_file_paths="${EMBY_LOCAL_FILE_PATH//,/\",\"}"
+    sed -i "s|\"/cms_local_file_path\"|${local_file_paths}|g" \
+      '/etc/nginx/conf.d/constant.js'
+fi
+
+########
+
+nginx
+
+# 启动CMS
+exec gosu cms:cms python /cms/cms-api/app/main.py

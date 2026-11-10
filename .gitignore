@@ -1,0 +1,33 @@
+# 运行数据（由容器生成，绝不提交）
+config/
+logs/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# 凭据
+.env
+115-cookies.txt
+*openapi*.json
+*token*.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+pip-wheel-metadata/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 发布物
+image/
+*.tar
+*.tar.gz

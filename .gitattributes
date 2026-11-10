@@ -1,0 +1,25 @@
+# 统一换行符：源码一律 LF，避免在 Linux 上出现 "bad interpreter: /bin/bash^M"
+* text=auto eol=lf
+
+# 可执行脚本必须是 LF
+*.sh    text eol=lf
+*.bat   text eol=crlf
+*.py    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+src/entrypoint  text eol=lf
+
+# 二进制 / 构建产物：不做任何转换
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.ico   binary
+*.gif   binary
+*.so    binary
+*.pyc   binary
+
+# 前端打包产物与反代脚本：保持字节原样
+src/web/assets/** -text
+src/embyExternalUrl/** -text

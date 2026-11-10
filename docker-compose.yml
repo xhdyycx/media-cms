@@ -1,0 +1,50 @@
+# Media CMS — 单容器部署
+#
+#   1) docker load -i novamedia-v1.0.tar
+#   2) cp .env.example .env  &&  按需修改
+#   3) docker compose up -d
+#
+#   面板  http://<主机IP>:9527     默认 admin / admin
+#   播放  http://<主机IP>:9096/d/<file_id>
+
+services:
+  media-cms:
+    image: novamedia:v1.0
+    container_name: media-cms
+    restart: unless-stopped
+
+    ports:
+      - "9527:9527"   # Web 面板 + API
+      - "9096:9096"   # Emby 反代（播放直连）
+
+    env_file:
+      - .env
+    environment:
+      - PUID=${PUID:-0}
+      - PGID=${PGID:-0}
+      - UMASK=${UMASK:-022}
+      - TZ=${TZ:-Asia/Shanghai}
+      - RUN_ENV=${RUN_ENV:-online}
+      - EMBY_HOST_PORT=${EMBY_HOST_PORT:-http://172.17.0.1:8096}
+      - EMBY_API_KEY=${EMBY_API_KEY:-}
+      - EMBY_LOCAL_FILE_PATH=${EMBY_LOCAL_FILE_PATH:-}
+      - IMAGE_CACHE_POLICY=${IMAGE_CACHE_POLICY:-3}
+
+    volumes:
+      - ./config:/config                 # 数据库、登录态、备份 —— 必须持久化
+      - ./logs:/logs                     # 运行日志，可随时清空
+      # 若要让 Emby 直接读本地文件，把网盘挂载目录也映射进来：
+      # - /mnt/cloud:/media:ro
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:9527/', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
