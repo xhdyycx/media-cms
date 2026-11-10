@@ -31,3 +31,4 @@ desktop.ini
 image/
 *.tar
 *.tar.gz
+.release-notes.md
